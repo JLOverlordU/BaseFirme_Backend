@@ -1,0 +1,7 @@
+node_modules
+vendor
+.env
+storage/*.key
+storage/*.sqlite
+npm-debug.log
+yarn-error.log
