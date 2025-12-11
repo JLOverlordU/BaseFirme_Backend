@@ -1,43 +1,30 @@
-# ---------- Etapa 1: imagen base con extensiones necesarias ----------
-FROM php:8.2-fpm AS base
+FROM php:8.2-fpm
 
-# Evita preguntas interactivas
-ARG DEBIAN_FRONTEND=noninteractive
-
-# Instalar utilidades y dependencias necesarias
+# Dependencias del sistema
 RUN apt-get update && apt-get install -y \
-    git \
-    unzip \
     libpng-dev \
     libjpeg62-turbo-dev \
     libfreetype6-dev \
     libzip-dev \
-    libonig-dev \
-    zip \
-    curl \
+    unzip \
+    git \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd zip pdo_mysql mbstring bcmath
+    && docker-php-ext-install gd zip pdo_mysql
 
-# Copiar composer desde la imagen oficial
+# Copiar composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
-# Copiar solo archivos de composer para aprovechar cache de Docker
-COPY composer.json composer.lock ./
-
-# Instalar dependencias de PHP sin dev (cacheable)
-RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
-
-# Copiar el resto de la app
+# Primero copia TODO el proyecto
 COPY . .
 
-# Permisos para storage y cache
-RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache || true \
-    && chmod -R 775 /app/storage /app/bootstrap/cache || true
+# Recién aquí ejecuta composer
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
-# Exponer puerto (Railway mapeará internamente)
+# Exponer puerto
 EXPOSE 8000
 
-# Comando por defecto (en producción ideal es usar nginx + php-fpm, pero para Railway esto funciona)
+# Comando final
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+
